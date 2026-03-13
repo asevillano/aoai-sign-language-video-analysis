@@ -154,7 +154,8 @@ Open `aoai-sign-translation.ipynb` in VS Code with the [Jupyter extension](https
 ├── call_aoai.py                   # Standalone Azure OpenAI call utility
 ├── requirements.txt               # Python dependencies
 ├── env.template                   # Environment variables template
-├── tests/
-    └── samples/                   # Few-shot example videos (for notebook)
+└── tests/
+    ├── samples-nb/                # Few-shot example videos (for notebook)
+    └── samples-app/               # Few-shot example videos (for app)
 
 ```

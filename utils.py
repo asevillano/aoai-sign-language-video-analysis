@@ -26,18 +26,6 @@ def system_message_for_few_shot_examples(samples_path, aoai_model_name, no_frame
         label = filename.replace("_", " ")
         sample_items.append({"label": label, "video_path": video_path})
 
-    '''
-    # 1bis. Load all sample videos from tests/samples2 and derive labels from filenames
-    samples_path = os.path.join("tests", "samples2")
-    sample_videos = sorted(glob.glob(os.path.join(samples_path, "*.mp4")))
-
-    # Derive label from filename: replace "_" with " "
-    for video_path in sample_videos:
-        filename = os.path.splitext(os.path.basename(video_path))[0]
-        label = filename.replace("_", " ")
-        sample_items.append({"label": label, "video_path": video_path})
-    '''
-
     few_shot_n = len(sample_items)
     print(f"Found {few_shot_n} few-shot example videos:")
     for item in sample_items:

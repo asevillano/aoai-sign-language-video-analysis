@@ -7,6 +7,7 @@ This project demonstrates how to use **Azure OpenAI GPT-4.1** multimodal capabil
 The repository includes:
 
 - **Jupyter Notebook** (`aoai-sign-translation.ipynb`): Interactive experimentation for few-shot BSL recognition — load example videos, build few-shot prompts, and evaluate the model's predictions against ground truth.
+- **Jupyter Notebook** (`sign_language_fine_tuning.ipynb`): End-to-end vision fine-tuning pipeline for sign language recognition (ASL/DGS) with Azure OpenAI GPT-4.1 — includes video download and validation, concept-group selection, frame extraction, JSONL dataset creation, SFT training, and base-vs-fine-tuned evaluation.
 - **Streamlit Web Application** (`video-analysis-app.py`): A user-friendly web app that lets users upload video files or provide YouTube URLs, and get real-time BSL concept recognition powered by the same few-shot pipeline.
 
 ---
@@ -80,6 +81,17 @@ flowchart TB
 5. **Inference on Test Video** — Extract frames from a test video (e.g., `tests/good_morning_test.mp4`), append them as a new user message, and call Azure OpenAI GPT-4.1.
 6. **Evaluate Results** — Compare the predicted concept against the ground truth and display the extracted frames for visual verification.
 
+### Notebook: `sign_language_fine_tuning.ipynb`
+
+1. **Dataset Acquisition** — Download and organize sign language clips from WLASL (ASL) and/or DGS sources.
+2. **Data Quality & Selection** — Run integrity checks to remove corrupt videos and select balanced concept groups for training.
+3. **Frame Preparation** — Extract and validate frames (format, size, color mode), then encode them for multimodal training.
+4. **JSONL Construction** — Build train/validation JSONL files with prompts and base64-encoded image content.
+5. **Fine-Tuning Job** — Upload files to Azure OpenAI and launch an SFT fine-tuning job on GPT-4.1 with configurable hyperparameters.
+6. **Monitoring & Analysis** — Track training events and metrics, analyze overfitting risk, and identify recommended checkpoints.
+7. **Evaluation** — Compare base vs fine-tuned model performance using accuracy/precision/recall views and confusion-matrix analysis.
+8. **Incremental Workflow** — Support multi-group/incremental fine-tuning and ad-hoc inference on arbitrary frame sequences.
+
 ### Application: `video-analysis-app.py`
 
 1. **Launch the App** — The Streamlit app starts and pre-loads few-shot examples from `tests/samples2/` (cached for performance).
@@ -140,7 +152,7 @@ streamlit run video-analysis-app.py
 
 ### 5. Run the Jupyter Notebook
 
-Open `aoai-sign-translation.ipynb` in VS Code with the [Jupyter extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) and run the cells sequentially.
+Open `aoai-sign-translation.ipynb` or `sign_language_fine_tuning.ipynb` in VS Code with the [Jupyter extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter) and run the cells sequentially.
 
 ---
 
@@ -149,6 +161,7 @@ Open `aoai-sign-translation.ipynb` in VS Code with the [Jupyter extension](https
 ```
 ├── video-analysis-app.py          # Streamlit web application for BSL recognition
 ├── aoai-sign-translation.ipynb    # Jupyter notebook for experimentation
+├── sign_language_fine_tuning.ipynb # End-to-end vision fine-tuning notebook for sign language recognition
 ├── utils.py                       # Few-shot prompt builder utilities
 ├── VideoFTTools.py                # Video extraction, dataset helpers, evaluation tools
 ├── call_aoai.py                   # Standalone Azure OpenAI call utility

@@ -37,7 +37,7 @@ aoai_client = AzureOpenAI(
     azure_ad_token_provider=token_provider,
     api_version="2025-04-01-preview"
 )
-aoai_model_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4.1")
+aoai_model_name = os.getenv("AZURE_OPENAI_FT_DEPLOYMENT", "gpt-4.1")
 
 CONCEPTS = "aid, alone, always, autumn, bright, cherry, comment, deodorant, dragon, drawer, embarrass, fact, flood, funeral, grammar, grow, guitar, june, maybe, nice, number, push, responsible, salad, skirt, skunk, special, take_up, turtle, which"
 concepts_sorted = sorted(CONCEPTS.split(", "))

@@ -1,14 +1,15 @@
-# British Sign Language (BSL) Recognition with Azure OpenAI GPT-4.1
+# American Sign Language (ASL) Recognition with Azure OpenAI GPT-4.1
 
 ## Objective
 
-This project demonstrates how to use **Azure OpenAI GPT-4.1** multimodal capabilities to **recognize British Sign Language (BSL) concepts from video**, using a **few-shot prompting** approach. The model receives labeled example videos of BSL signs and then identifies the signed concept in new, unseen videos.
+This project demonstrates how to use **Azure OpenAI GPT-4.1** multimodal capabilities to **recognize American Sign Language (ASL) concepts from video**, using a **few-shot prompting** approach. The model receives labeled example videos of ASL signs and then identifies the signed concept in new, unseen videos.
 
 The repository includes:
 
-- **Jupyter Notebook** (`aoai-sign-translation.ipynb`): Interactive experimentation for few-shot BSL recognition — load example videos, build few-shot prompts, and evaluate the model's predictions against ground truth.
+- **Jupyter Notebook** (`aoai-sign-translation.ipynb`): Interactive experimentation for few-shot ASL recognition — load example videos, build few-shot prompts, and evaluate the model's predictions against ground truth.
 - **Jupyter Notebook** (`sign_language_fine_tuning.ipynb`): End-to-end vision fine-tuning pipeline for sign language recognition (ASL/DGS) with Azure OpenAI GPT-4.1 — includes video download and validation, concept-group selection, frame extraction, JSONL dataset creation, SFT training, and base-vs-fine-tuned evaluation.
-- **Streamlit Web Application** (`video-analysis-app.py`): A user-friendly web app that lets users upload video files or provide YouTube URLs, and get real-time BSL concept recognition powered by the same few-shot pipeline.
+- **Few-Shot Video Analysis Streamlit Web Application** (`video-analysis-few-shots-app.py`): A user-friendly web app that lets users upload video files or provide YouTube URLs, and get real-time ASL concept recognition powered by the few-shot pipeline.
+- **Fine-Tuned Video Analysis Streamlit Web Application** (`video-analysis-fine-tuned-app.py`): A Streamlit web app that uses a **fine-tuned GPT-4.1 model** (no few-shot examples needed) to recognize ASL concepts from uploaded videos or YouTube URLs. It splits videos into segments, extracts frames, sends them to the fine-tuned model with a detailed analysis prompt, and generates a natural English phrase from the sequence of identified concepts.
 
 ---
 
@@ -21,21 +22,31 @@ flowchart TB
         A2[Provide YouTube URL]
     end
 
-    subgraph App["🖥️ Streamlit Web App<br/>(video-analysis-app.py)"]
+    subgraph FewShotApp["🖥️ Few-Shot App<br/>(video-analysis-few-shots-app.py)"]
         B1[Video Ingestion<br/>File upload / yt-dlp download]
         B2[Video Splitting<br/>ffmpeg segments of N seconds]
-        B3[Frame Extraction<br/>OpenCV: 1 frame per N seconds]
+        B3[Frame Extraction<br/>OpenCV: N frames per second]
         B4[Frame Resizing<br/>Reduce resolution for token savings]
-        B5[Few-Shot Prompt Builder<br/>utils.py: labeled BSL examples]
-        B6[Response Display<br/>Predicted BSL concept]
+        B5[Few-Shot Prompt Builder<br/>utils.py: labeled ASL examples]
+        B6[Response Display<br/>Predicted ASL concept]
     end
 
-    subgraph FewShot["📂 Few-Shot Examples<br/>(tests/samples2/)"]
+    subgraph FineTunedApp["🖥️ Fine-Tuned App<br/>(video-analysis-fine-tuned-app.py)"]
+        F1[Video Ingestion<br/>File upload / yt-dlp download]
+        F2[Video Splitting<br/>ffmpeg segments of N seconds]
+        F3[Frame Extraction<br/>OpenCV: N frames per second]
+        F4[Frame Resizing<br/>Reduce resolution for token savings]
+        F5[Detailed Analysis Prompt<br/>Hand shape · Movement · Location]
+        F6[Concept Display +<br/>Phrase Generation]
+    end
+
+    subgraph FewShot["📂 Few-Shot Examples<br/>(tests/samples-app/)"]
         C1[".mp4 videos<br/>(labeled by filename)"]
     end
 
     subgraph AzureOpenAI["☁️ Azure OpenAI Service"]
-        D1["GPT-4.1 (multimodal)<br/>Chat Completions API"]
+        D1["GPT-4.1 base (multimodal)<br/>Chat Completions API"]
+        D2["GPT-4.1 fine-tuned<br/>Chat Completions API"]
     end
 
     subgraph Auth["🔐 Authentication"]
@@ -44,6 +55,8 @@ flowchart TB
 
     A1 --> B1
     A2 --> B1
+    A1 --> F1
+    A2 --> F1
     B1 --> B2
     B2 --> B3
     B3 --> B4
@@ -51,21 +64,30 @@ flowchart TB
     B4 --> B5
     B5 -->|"Messages:<br/>system + few-shot examples<br/>+ query frames"| D1
     E1 -.->|Bearer Token| D1
+    E1 -.->|Bearer Token| D2
     D1 -->|"JSON response:<br/>{concept: ...}"| B6
+    F1 --> F2
+    F2 --> F3
+    F3 --> F4
+    F4 --> F5
+    F5 -->|"Messages:<br/>system analysis prompt<br/>+ query frames"| D2
+    D2 -->|"Predicted concept(s)"| F6
 ```
 
 ### Components
 
 | Component | Description |
 |---|---|
-| **Streamlit Web App** | Interactive UI for uploading videos, configuring parameters, and viewing results. |
+| **Few-Shot Streamlit App** | Interactive UI for uploading videos, configuring parameters, and viewing results using few-shot prompting with labeled examples. |
+| **Fine-Tuned Streamlit App** | Interactive UI that uses a fine-tuned GPT-4.1 model — no example videos needed. Includes phrase generation from identified concepts. |
 | **Video Ingestion** | Accepts local file uploads (.mp4, .avi, .mov) or YouTube URLs via `yt-dlp`. |
 | **Video Splitting** | Uses `ffmpeg` to split long videos into segments of configurable duration. |
-| **Frame Extraction** | Uses OpenCV to extract frames at a configurable rate (default: 1 frame/second). Each frame is timestamped. |
+| **Frame Extraction** | Uses OpenCV to extract frames at a configurable rate (default: 1-4 frames/second). Each frame is timestamped. |
 | **Frame Resizing** | Reduces frame resolution to save tokens and improve latency. |
-| **Few-Shot Prompt Builder** (`utils.py`) | Loads labeled BSL example videos from disk, extracts their frames, and builds a few-shot message sequence (system prompt + example user/assistant turns). |
+| **Few-Shot Prompt Builder** (`utils.py`) | Loads labeled ASL example videos from disk, extracts their frames, and builds a few-shot message sequence (system prompt + example user/assistant turns). Used by the few-shot app only. |
 | **VideoFTTools** (`VideoFTTools.py`) | Utility class for video frame extraction, display, and dataset management. |
-| **Azure OpenAI GPT-4.1** | Multimodal model that receives the few-shot examples and query frames, and returns the predicted BSL concept as JSON. |
+| **Azure OpenAI GPT-4.1** | Base multimodal model (few-shot app) or fine-tuned model (fine-tuned app) that receives frames and returns predicted ASL concepts. |
+| **Phrase Generation** | The fine-tuned app sends the ordered list of recognized concepts to GPT-4.1 to compose the most likely natural English sentence. |
 | **Microsoft Entra ID** | Authentication via `DefaultAzureCredential` with bearer token provider — no API keys required. |
 
 ---
@@ -75,7 +97,7 @@ flowchart TB
 ### Notebook: `aoai-sign-translation.ipynb`
 
 1. **Setup & Configuration** — Load environment variables, initialize the Azure OpenAI client with Entra ID authentication, and configure dataset parameters (number of frames, classes, seeds).
-2. **Load Few-Shot Examples** — Read labeled BSL video samples from `tests/samples/`. Each `.mp4` filename encodes the BSL concept label (e.g., `good_morning.mp4` → "good morning").
+2. **Load Few-Shot Examples** — Read labeled ASL video samples from `tests/samples/`. Each `.mp4` filename encodes the ASL concept label (e.g., `good_morning.mp4` → "good morning").
 3. **Extract & Encode Frames** — Use `VideoExtractor` to extract N frames per video, optionally resize them, and encode as base64 JPEG.
 4. **Build Few-Shot Prompt** — Construct a message sequence: a system prompt describing the task and possible labels, followed by user/assistant turns for each labeled example.
 5. **Inference on Test Video** — Extract frames from a test video (e.g., `tests/good_morning_test.mp4`), append them as a new user message, and call Azure OpenAI GPT-4.1.
@@ -92,15 +114,26 @@ flowchart TB
 7. **Evaluation** — Compare base vs fine-tuned model performance using accuracy/precision/recall views and confusion-matrix analysis.
 8. **Incremental Workflow** — Support multi-group/incremental fine-tuning and ad-hoc inference on arbitrary frame sequences.
 
-### Application: `video-analysis-app.py`
+### Application: `video-analysis-few-shots-app.py`
 
-1. **Launch the App** — The Streamlit app starts and pre-loads few-shot examples from `tests/samples2/` (cached for performance).
+1. **Launch the App** — The Streamlit app starts and pre-loads few-shot examples from `tests/samples-app/` (cached for performance).
 2. **Select Video Source** — The user chooses to upload a local video file or provide a YouTube URL.
 3. **Configure Parameters** — Via the sidebar: segment duration, frame extraction rate, resize ratio, temperature, and prompts.
 4. **Video Splitting** — The video is split into segments of N seconds using `ffmpeg` for efficient processing.
 5. **Frame Extraction** — For each segment, frames are extracted at the configured rate using OpenCV and encoded as base64.
 6. **Model Analysis** — The few-shot messages (system + examples) are combined with the query frames and sent to Azure OpenAI GPT-4.1.
-7. **Display Results** — The predicted BSL concept is displayed alongside the video segment in the UI.
+7. **Display Results** — The predicted ASL concept is displayed alongside the video segment in the UI.
+
+### Application: `video-analysis-fine-tuned-app.py`
+
+1. **Launch the App** — The Streamlit app starts with a detailed ASL analysis system prompt (no few-shot examples required).
+2. **Select Video Source** — The user chooses to upload a local video file or provide a YouTube URL.
+3. **Configure Parameters** — Via the sidebar: segment duration (default 2s), frame extraction rate (default 4 fps), resize ratio, temperature, and prompts.
+4. **Video Splitting** — The video is split into short segments using `ffmpeg` for efficient per-sign processing.
+5. **Frame Extraction** — For each segment, frames are extracted at the configured rate using OpenCV and encoded as base64.
+6. **Fine-Tuned Model Analysis** — Frames are sent to the fine-tuned GPT-4.1 model with a structured system prompt that guides the model through hand shape, movement trajectory, location, facial expression, and transition analysis.
+7. **Concept Identification** — The fine-tuned model returns the recognized ASL concept(s) from a vocabulary of 30 signs.
+8. **Phrase Generation** — After all segments are processed, the identified concepts are sent to the model to compose a natural English sentence representing what the signer communicated.
 
 ---
 
@@ -147,7 +180,11 @@ cp env.template .env
 ### 4. Run the Streamlit application
 
 ```bash
-streamlit run video-analysis-app.py
+# Few-shot app (uses labeled example videos)
+streamlit run video-analysis-few-shots-app.py
+
+# Fine-tuned model app (no few-shot examples needed)
+streamlit run video-analysis-fine-tuned-app.py
 ```
 
 ### 5. Run the Jupyter Notebook
@@ -159,16 +196,15 @@ Open `aoai-sign-translation.ipynb` or `sign_language_fine_tuning.ipynb` in VS Co
 ## Project Structure
 
 ```
-├── video-analysis-app.py          # Streamlit web application for BSL recognition
-├── aoai-sign-translation.ipynb    # Jupyter notebook for experimentation
-├── sign_language_fine_tuning.ipynb # End-to-end vision fine-tuning notebook for sign language recognition
-├── utils.py                       # Few-shot prompt builder utilities
-├── VideoFTTools.py                # Video extraction, dataset helpers, evaluation tools
-├── call_aoai.py                   # Standalone Azure OpenAI call utility
-├── requirements.txt               # Python dependencies
-├── env.template                   # Environment variables template
+├── video-analysis-few-shots-app.py     # Streamlit app: few-shot ASL recognition
+├── video-analysis-fine-tuned-app.py    # Streamlit app: fine-tuned model ASL recognition
+├── aoai-sign-translation.ipynb         # Jupyter notebook for experimentation
+├── sign_language_fine_tuning.ipynb     # End-to-end vision fine-tuning notebook
+├── utils.py                            # Few-shot prompt builder utilities
+├── VideoFTTools.py                     # Video extraction, dataset helpers, evaluation tools
+├── requirements.txt                    # Python dependencies
+├── env.template                        # Environment variables template
 └── tests/
-    ├── samples-nb/                # Few-shot example videos (for notebook)
-    └── samples-app/               # Few-shot example videos (for app)
-
+    ├── samples-nb/                     # Few-shot example videos (for notebook)
+    └── samples-app/                    # Few-shot example videos (for app)
 ```
